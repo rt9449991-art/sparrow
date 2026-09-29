@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>SPARROW — TAP & LISTEN!</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700;800&family=Bangers&family=Nunito:wght@800;900&display=swap" rel="stylesheet">
+<style>
+*{font-family:'Fredoka',sans-serif}
+.font-banger{font-family:'Bangers',cursive}
+.font-nunito{font-family:'Nunito',sans-serif}
+.halftone{
+  background-color:#7c3aed;
+  background-image:
+    radial-gradient(circle at 2px 2px, rgba(255,255,255,0.18) 2px, transparent 0),
+    linear-gradient(135deg,#a855f7 0%,#06b6d4 50%,#facc15 100%);
+  background-size:22px 22px, 100% 100%;
+}
+.comic-shadow{box-shadow:6px 6px 0px #000, 0 10px 30px rgba(0,0,0,0.2)}
+.comic-shadow-sm{box-shadow:4px 4px 0px #000}
+.text-stroke{
+  -webkit-text-stroke:3px #000;
+  paint-order: stroke fill;
+}
+.tap-active:active{transform:translate(3px,3px); box-shadow:2px 2px 0px #000 !important}
+.float{animation:float 2.8s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.bounce-tap{animation:bounceTap 420ms cubic-bezier(.34,1.56,.64,1)}
+@keyframes bounceTap{0%{transform:scale(1) rotate(0)}30%{transform:scale(0.88,1.12) rotate(-2deg)}55%{transform:scale(1.08,0.92) rotate(1.5deg)}100%{transform:scale(1) rotate(0)}}
+.shake{animation:shake 380ms ease}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px) rotate(-1deg)}40%{transform:translateX(6px) rotate(1deg)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.bubble-in{animation:bubbleIn 900ms cubic-bezier(.34,1.56,.64,1) forwards}
+@keyframes bubbleIn{0%{transform:scale(0) rotate(-12deg); opacity:0}20%{transform:scale(1.15) rotate(4deg); opacity:1}100%{transform:scale(1) rotate(0); opacity:1}}
+.wave{animation:wavePulse 700ms ease-out forwards}
+@keyframes wavePulse{0%{transform:scale(0.6); opacity:0.9}100%{transform:scale(1.8); opacity:0}}
+.particle{position:absolute; pointer-events:none; animation:particle 700ms ease-out forwards}
+@keyframes particle{0%{transform:translate(-50%,-50%) scale(1); opacity:1}100%{transform:translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(0) rotate(180deg); opacity:0}}
+.pulseYellow{animation:pulseY 1.2s infinite}
+@keyframes pulseY{0%,100%{transform:scale(1); box-shadow:0 0 0 0 rgba(250,204,21,0.6)}50%{transform:scale(1.02); box-shadow:0 0 0 12px rgba(250,204,21,0)}}
+.shine{position:relative; overflow:hidden}
+.shine:after{content:''; position:absolute; top:-50%; left:-50%; width:200%; height:200%; background:linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.4) 50%, transparent 70%); transform:translateX(-100%) rotate(12deg); animation:shine 3s infinite}
+@keyframes shine{0%{transform:translateX(-100%) rotate(12deg)}60%{transform:translateX(100%) rotate(12deg)}100%{transform:translateX(100%) rotate(12deg)}}
+.hide-scrollbar::-webkit-scrollbar{display:none}
+</style>
+</head>
+<body class="bg-[#f1f5f9] min-h-screen flex items-center justify-center p-3 md:p-6">
+<!-- Background comic burst behind app -->
+<div class="fixed inset-0 -z-10 bg-[#fef08a] overflow-hidden">
+  <div class="absolute inset-0 opacity-20" style="background:radial-gradient(circle at 30% 20%, #a855f7 0 20%, transparent 20%), radial-gradient(circle at 80% 80%, #06b6d4 0 18%, transparent 18%), radial-gradient(circle at 50% 50%, #f59e0b 0 12%, transparent 12%)"></div>
+  <div class="absolute inset-0 halftone opacity-30"></div>
+</div>
+
+<div class="w-full max-w-[520px] flex flex-col items-center gap-3">
+  <!-- Top mini nav -->
+  <div class="hidden md:flex w-full items-center justify-between text-[11px] font-black tracking-widest text-black/60 px-2">
+    <span class="bg-white px-3 py-1 rounded-full border-2 border-black">VIRAL TAP GAME • 9:16</span>
+    <div class="flex gap-2">
+      <button onclick="openThumb()" class="bg-white px-3 py-1 rounded-full border-2 border-black hover:bg-yellow-300 transition">VIEW 16:9 THUMBNAIL</button>
+      <button onclick="openAsset()" class="bg-white px-3 py-1 rounded-full border-2 border-black hover:bg-cyan-300 transition">CHARACTER ASSET</button>
+    </div>
+  </div>
+
+  <!-- MAIN PHONE FRAME -->
+  <div id="app" class="relative w-full max-w-[390px] h-[780px] max-h-[84vh] md:max-h-[780px] bg-white rounded-[36px] border-[4px] border-black comic-shadow overflow-hidden flex flex-col select-none">
+    <!-- Header -->
+    <div class="relative z-20 bg-white border-b-[4px] border-black px-4 pt-4 pb-3">
+      <div class="flex justify-between items-start gap-2">
+        <div class="flex-1">
+          <h1 class="font-banger leading-none tracking-wide">
+            <span class="text-[28px] md:text-[32px] text-[#a855f7] text-stroke" style="filter:drop-shadow(2px 2px 0 #000)">SPARROW</span>
+            <span class="text-[11px] font-nunito font-black tracking-[0.18em] text-black bg-[#facc15] px-2 py-0.5 rounded-full border-2 border-black ml-1 align-middle">TAP & LISTEN!</span>
+          </h1>
+          <p class="text-[10px] font-black tracking-widest text-black/50 mt-1">TAP THE STAR — HEAR THE LEGENDARY AOUCH!</p>
+        </div>
+        <!-- OUCH Counter Top Right -->
+        <div class="shrink-0 flex flex-col items-end">
+          <div class="bg-gradient-to-br from-[#ff3b30] to-[#ff8a00] text-white rounded-2xl border-[3px] border-black px-3 py-1.5 comic-shadow-sm min-w-[92px] text-center">
+            <div class="text-[9px] font-black tracking-[0.2em] leading-none opacity-90">OUCH COUNT</div>
+            <div id="ouchCount" class="font-black text-[24px] leading-none tracking-tighter">0</div>
+          </div>
+          <div id="comboBadge" class="hidden mt-1 bg-black text-[#facc15] text-[10px] font-black px-2 py-0.5 rounded-full">🔥 COMBO x2</div>
+        </div>
+      </div>
+      <!-- sound waves decos -->
+      <div class="flex items-center gap-1 mt-2">
+        <span class="w-6 h-1 bg-black rounded-full"></span><span class="w-3 h-1 bg-black/30 rounded-full"></span>
+        <span class="ml-auto flex gap-1 items-center text-[9px] font-black tracking-widest bg-black text-white px-2 py-1 rounded-full"><span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span> AUDIO ON • TAP TO HEAR</span>
+      </div>
+    </div>
+
+    <!-- Stage -->
+    <div class="flex-1 relative halftone flex flex-col items-center justify-between p-3 overflow-hidden">
+      <!-- comic burst behind character -->
+      <div class="absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] h-[340px] bg-[#facc15] rotate-12 rounded-[40px] border-[4px] border-black opacity-90" style="clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);"></div>
+      <div class="absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-white rounded-full border-[4px] border-black"></div>
+      <!-- halftone dots circle -->
+      <div class="absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[280px] rounded-full opacity-20" style="background:radial-gradient(circle, #000 2px, transparent 2.5px); background-size:14px 14px"></div>
+
+      <!-- Speech Bubble -->
+      <div id="bubble" class="absolute z-30 top-[14%] right-[8%] hidden">
+        <div class="relative bg-white border-[3px] border-black rounded-[18px] px-4 py-2 comic-shadow-sm">
+          <div id="bubbleText" class="font-black text-[16px] leading-none text-black">AOUCH!!</div>
+          <div class="absolute -bottom-2 left-6 w-4 h-4 bg-white border-r-[3px] border-b-[3px] border-black rotate-45"></div>
+        </div>
+        <div class="flex gap-1 justify-center mt-2">
+          <span class="w-1.5 h-6 bg-black rounded-full"></span><span class="w-1.5 h-4 bg-black rounded-full mt-1"></span><span class="w-1.5 h-2 bg-black rounded-full mt-2"></span>
+        </div>
+      </div>
+
+      <!-- Sound waves -->
+      <div id="waves" class="absolute z-20 top-[38%] left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none hidden">
+        <div class="relative w-40 h-40 flex items-center justify-center">
+          <div class="absolute w-16 h-16 border-[3px] border-black rounded-full wave" style="animation-delay:0ms"></div>
+          <div class="absolute w-16 h-16 border-[3px] border-black rounded-full wave" style="animation-delay:120ms"></div>
+          <div class="absolute w-16 h-16 border-[3px] border-black rounded-full wave" style="animation-delay:240ms"></div>
+          <div class="text-[28px]">🔊</div>
+        </div>
+      </div>
+
+      <!-- Character Wrapper -->
+      <div id="characterWrap" class="relative z-10 w-[84%] h-[58%] mt-4 float cursor-pointer" onclick="handleTap(event)">
+        <div id="characterCard" class="w-full h-full bg-white rounded-[28px] border-[4px] border-black comic-shadow overflow-hidden relative">
+          <img id="charImg" src="https://www.designarena.ai/u/aa054a41-57b7-4446-ba23-c4433de3efc3" alt="Sparrow" class="w-full h-full object-cover object-top select-none pointer-events-none">
+          <!-- glossy overlay -->
+          <div class="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-white/20 pointer-events-none"></div>
+          <!-- blush effect on tap -->
+          <div id="blush" class="absolute top-[38%] left-[28%] right-[28%] h-[12%] opacity-0 transition duration-200 pointer-events-none flex justify-between px-2">
+            <span class="w-10 h-6 bg-pink-500 rounded-full blur-[6px] opacity-70"></span>
+            <span class="w-10 h-6 bg-pink-500 rounded-full blur-[6px] opacity-70"></span>
+          </div>
+          <!-- tap hint -->
+          <div class="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black text-white text-[9px] font-black tracking-widest px-3 py-1 rounded-full whitespace-nowrap">👆 TAP ME!</div>
+          <!-- shine -->
+          <div class="absolute top-3 left-3 bg-white/80 backdrop-blur px-2 py-1 rounded-full border-2 border-black flex items-center gap-1">
+            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+            <span class="text-[9px] font-black">LIVE REACTION</span>
+          </div>
+        </div>
+        <!-- burst particles container -->
+        <div id="burst" class="absolute inset-0 pointer-events-none overflow-visible"></div>
+        <!-- floating OUCH texts -->
+        <div id="floatTexts" class="absolute inset-0 pointer-events-none"></div>
+      </div>
+
+      <!-- Stats bar -->
+      <div class="relative z-20 w-full bg-white rounded-2xl border-[3px] border-black p-2 flex items-center justify-between comic-shadow-sm mt-2">
+        <div class="flex items-center gap-2">
+          <div class="w-10 h-10 rounded-xl bg-[#06b6d4] border-2 border-black flex items-center justify-center text-white font-black">⚡</div>
+          <div>
+            <div class="text-[9px] font-black tracking-widest text-black/50 leading-none">STREAK</div>
+            <div id="streakVal" class="font-black text-[16px] leading-none">0</div>
+          </div>
+        </div>
+        <div class="h-8 w-[1px] bg-black/10"></div>
+        <div class="text-center">
+          <div class="text-[9px] font-black tracking-widest text-black/50 leading-none">BEST</div>
+          <div id="bestVal" class="font-black text-[16px] leading-none">0</div>
+        </div>
+        <div class="h-8 w-[1px] bg-black/10"></div>
+        <div class="flex items-center gap-1">
+          <button onclick="toggleSound()" id="soundBtn" class="w-9 h-9 rounded-xl bg-[#facc15] border-2 border-black flex items-center justify-center">🔊</button>
+          <button onclick="resetGame()" class="w-9 h-9 rounded-xl bg-white border-2 border-black flex items-center justify-center">↺</button>
+        </div>
+      </div>
+
+      <!-- TAP Button -->
+      <button id="tapBtn" onclick="handleTap(event)" class="relative z-20 w-full mt-2 bg-[#facc15] border-[4px] border-black rounded-[22px] py-4 comic-shadow flex items-center justify-center gap-3 tap-active pulseYellow shine">
+        <span class="w-12 h-12 bg-white border-[3px] border-black rounded-full flex items-center justify-center text-[22px]">👆</span>
+        <span class="font-black text-[28px] tracking-tight text-black leading-none">TAP!</span>
+        <span class="bg-black text-white text-[10px] font-black px-2 py-1 rounded-full">SPACE</span>
+        <span class="absolute -top-2 -right-2 bg-[#ff3b30] text-white text-[10px] font-black px-2 py-1 rounded-full border-2 border-black rotate-6">+1 OUCH</span>
+      </button>
+
+      <p class="text-[9px] font-black tracking-[0.14em] text-white/90 mt-2 drop-shadow-[0_1px_0_rgba(0,0,0,1)]">AUDIO FROM SUPPLIED CLIP ONLY • TAP TO SYNC REACTION</p>
+    </div>
+
+    <!-- Challenge bar -->
+    <div class="bg-black text-white px-3 py-2 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="bg-[#facc15] text-black text-[10px] font-black px-2 py-1 rounded-full">⏱ 30S CHALLENGE</span>
+        <span id="timerDisplay" class="font-black text-[13px]">00:30</span>
+      </div>
+      <button onclick="startChallenge()" id="challengeBtn" class="bg-white text-black font-black text-[11px] px-3 py-1.5 rounded-full border-2 border-white hover:bg-yellow-300 transition">START →</button>
+    </div>
+
+    <!-- START OVERLAY -->
+    <div id="startOverlay" class="absolute inset-0 z-40 bg-white/95 backdrop-blur flex flex-col items-center justify-center p-6 text-center">
+      <div class="w-20 h-20 rounded-full border-[4px] border-black overflow-hidden comic-shadow-sm mb-3">
+        <img src="https://www.designarena.ai/u/aa054a41-57b7-4446-ba23-c4433de3efc3" class="w-full h-full object-cover object-top">
+      </div>
+      <div class="bg-[#facc15] border-[3px] border-black rounded-full px-3 py-1 font-black text-[10px] tracking-widest mb-2">VIRAL SENSATION • 2M+ TAPS</div>
+      <h2 class="font-banger text-[42px] leading-none text-[#a855f7] text-stroke">SPARROW</h2>
+      <p class="font-black text-[18px] tracking-tight -mt-1">TAP & LISTEN!</p>
+      <p class="text-[12px] font-bold text-black/60 max-w-[260px] mt-2 leading-tight">Tap Sparrow and hear the legendary <span class="bg-yellow-200 px-1">“AOUCH!”</span> Every tap = crazy face + sound wave + comic burst!</p>
+      <div class="grid grid-cols-3 gap-2 w-full mt-4">
+        <div class="bg-[#e0f2fe] border-2 border-black rounded-xl p-2">
+          <div class="text-[18px]">👆</div><div class="text-[9px] font-black leading-tight">TAP<br>CHARACTER</div>
+        </div>
+        <div class="bg-[#fef9c3] border-2 border-black rounded-xl p-2">
+          <div class="text-[18px]">🔊</div><div class="text-[9px] font-black leading-tight">HEAR<br>AOUCH!</div>
+        </div>
+        <div class="bg-[#fce7f3] border-2 border-black rounded-xl p-2">
+          <div class="text-[18px]">💥</div><div class="text-[9px] font-black leading-tight">COLLECT<br>OUCHES</div>
+        </div>
+      </div>
+      <button onclick="enterGame()" class="mt-4 w-full bg-[#facc15] border-[4px] border-black rounded-2xl py-3.5 font-black text-[18px] comic-shadow tap-active flex items-center justify-center gap-2">▶ PLAY FREE TAP <span class="bg-black text-white text-xs px-2 py-1 rounded-full">GO</span></button>
+      <button onclick="enterGame(true)" class="mt-2 w-full bg-black text-white border-[3px] border-black rounded-2xl py-3 font-black text-[13px] flex items-center justify-center gap-2">⏱ PLAY 30S CHALLENGE</button>
+      <p class="text-[9px] font-bold text-black/40 mt-3 tracking-widest">USES ONLY SUPPLIED AUDIO • NO FAKE VOICE</p>
+    </div>
+
+    <!-- GAME OVER OVERLAY -->
+    <div id="gameOver" class="absolute inset-0 z-40 bg-[#7c3aed]/95 backdrop-blur hidden flex-col items-center justify-center p-6 text-center">
+      <div class="bg-white border-[4px] border-black rounded-[28px] p-5 w-full comic-shadow">
+        <div class="text-[12px] font-black tracking-widest bg-black text-white inline-block px-3 py-1 rounded-full">⏱ TIME'S UP!</div>
+        <h3 class="font-black text-[30px] leading-none mt-2">YOU TAPPED</h3>
+        <div id="finalScore" class="font-black text-[56px] leading-none text-[#ff3b30]">0</div>
+        <div class="text-[11px] font-black tracking-widest -mt-1">OUCHES IN 30 SECONDS!</div>
+        <div class="grid grid-cols-2 gap-2 mt-4">
+          <div class="bg-[#facc15] border-2 border-black rounded-xl p-2">
+            <div class="text-[10px] font-black opacity-60">BEST</div><div id="finalBest" class="font-black text-xl">0</div>
+          </div>
+          <div class="bg-[#06b6d4] border-2 border-black rounded-xl p-2 text-white">
+            <div class="text-[10px] font-black opacity-80">TAPS/SEC</div><div id="finalTps" class="font-black text-xl">0.0</div>
+          </div>
+        </div>
+        <div id="rankText" class="mt-3 font-black text-sm bg-black text-white rounded-full py-1">RANK: TAP NOVICE</div>
+        <button onclick="startChallenge()" class="mt-4 w-full bg-[#facc15] border-[3px] border-black rounded-xl py-3 font-black comic-shadow-sm">PLAY AGAIN 🔄</button>
+        <button onclick="closeGameOver()" class="mt-2 w-full bg-white border-2 border-black rounded-xl py-2.5 font-black text-sm">FREE TAP MODE</button>
+        <button onclick="shareScore()" class="mt-2 text-[11px] font-black tracking-widest underline">SHARE SCORE 📤</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Desktop extra: Thumbnail preview inline -->
+  <div class="hidden lg:flex w-full max-w-[520px] bg-white rounded-2xl border-[3px] border-black p-3 comic-shadow-sm gap-3">
+    <div class="flex-1">
+      <div class="text-[10px] font-black tracking-widest">16:9 YOUTUBE THUMBNAIL PREVIEW</div>
+      <div id="thumbPreview" class="mt-2 aspect-video bg-gradient-to-br from-[#a855f7] via-[#06b6d4] to-[#facc15] rounded-xl border-2 border-black overflow-hidden relative flex items-center p-3 cursor-pointer" onclick="openThumb()">
+        <img src="https://www.designarena.ai/u/aa054a41-57b7-4446-ba23-c4433de3efc3" class="absolute right-0 bottom-0 w-[42%] h-full object-cover object-top" style="mask-image: linear-gradient(to left, black 60%, transparent)">
+        <div class="relative z-10">
+          <div class="font-banger text-[22px] leading-none text-white text-stroke">SPARROW</div>
+          <div class="font-black text-[13px] bg-[#facc15] border-2 border-black inline-block px-2 rounded-full -rotate-1">TAP & LISTEN!</div>
+          <div class="mt-2 bg-white border-2 border-black rounded-full px-2 py-1 inline-flex items-center gap-1 font-black text-[10px]">👆 TAP <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span></div>
+        </div>
+        <div class="absolute left-[48%] top-[32%] bg-white border-2 border-black rounded-xl px-2 py-1 font-black text-[10px] rotate-3">AOUCH!! 💥</div>
+      </div>
+    </div>
+  </div>
+  <p class="text-[10px] font-bold text-black/40 text-center max-w-[390px]">Character likeness preserved from reference photo. Audio plays only from supplied clip. No synthetic voice. Professional fan-game parody.</p>
+</div>
+
+<!-- MODALS -->
+<div id="thumbModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur hidden items-center justify-center p-4" onclick="if(event.target===this)closeThumb()">
+  <div class="bg-white rounded-[20px] border-[4px] border-black max-w-[820px] w-full overflow-hidden comic-shadow">
+    <div class="p-3 border-b-[3px] border-black flex justify-between items-center">
+      <span class="font-black text-sm">📺 16:9 THUMBNAIL — SPARROW TAP & LISTEN!</span>
+      <button onclick="closeThumb()" class="w-8 h-8 bg-black text-white rounded-full font-black">✕</button>
+    </div>
+    <div class="p-4">
+      <div class="aspect-video bg-gradient-to-br from-violet-600 via-cyan-500 to-yellow-400 rounded-2xl border-[4px] border-black overflow-hidden relative flex items-center">
+        <!-- comic burst bg -->
+        <div class="absolute inset-0 opacity-30" style="background:radial-gradient(circle at 2px 2px, white 2px, transparent 0); background-size:18px 18px"></div>
+        <div class="absolute -right-10 -bottom-10 w-[55%] h-[115%]">
+          <img src="https://www.designarena.ai/u/aa054a41-57b7-4446-ba23-c4433de3efc3" class="w-full h-full object-cover object-top rounded-l-[32px] border-l-[6px] border-t-[6px] border-black shadow-[-10px_0_30px_rgba(0,0,0,0.3)]">
+          <div class="absolute top-6 left-4 bg-white border-[3px] border-black rounded-2xl px-3 py-1 font-black rotate-3 comic-shadow-sm">😲 WHAAAT?!</div>
+        </div>
+        <div class="relative z-10 p-6 md:p-10 max-w-[58%]">
+          <div class="inline-block bg-[#facc15] border-[3px] border-black rounded-full px-3 py-1 font-black text-[11px] tracking-widest rotate-1">VIRAL TAP GAME</div>
+          <h2 class="font-banger text-[46px] md:text-[66px] leading-[0.85] text-white text-stroke mt-2" style="-webkit-text-stroke:5px #000">SPARROW</h2>
+          <div class="font-black text-[22px] md:text-[30px] leading-none bg-white border-[4px] border-black inline-block px-4 py-1 rounded-full -rotate-1 mt-1">TAP & LISTEN! 🔊</div>
+          <div class="flex items-center gap-3 mt-4">
+            <div class="bg-[#facc15] border-[4px] border-black rounded-2xl px-5 py-3 font-black text-xl flex items-center gap-2 comic-shadow-sm">👆 TAP! <span class="bg-black text-white rounded-full px-2 py-0.5 text-xs">+1</span></div>
+            <div class="hidden md:flex gap-1">
+              <span class="w-1 h-8 bg-black rounded-full"></span><span class="w-1 h-6 bg-black rounded-full"></span><span class="w-1 h-4 bg-black rounded-full"></span>
+            </div>
+          </div>
+          <div class="mt-3 flex gap-2">
+            <span class="bg-black text-white text-[10px] font-black px-2 py-1 rounded-full">💥 1M+ OUCHES</span>
+            <span class="bg-white border-2 border-black text-[10px] font-black px-2 py-1 rounded-full">AOUCH!!</span>
+          </div>
+        </div>
+        <!-- sound waves -->
+        <div class="absolute left-[46%] top-[38%] flex gap-1">
+          <span class="w-1.5 h-10 bg-black rounded-full"></span><span class="w-1.5 h-14 bg-black rounded-full"></span><span class="w-1.5 h-10 bg-black rounded-full"></span>
+        </div>
+      </div>
+      <div class="flex gap-2 mt-3">
+        <button onclick="downloadThumb()" class="flex-1 bg-black text-white font-black py-2.5 rounded-xl border-2 border-black">⬇ DOWNLOAD THUMBNAIL</button>
+        <button onclick="closeThumb()" class="px-6 bg-white border-2 border-black font-black rounded-xl">CLOSE</button>
+      </div>
+      <p class="text-[10px] text-center font-bold text-black/40 mt-2">High-res 1280×720 • Bold comic style • Ready for YouTube/Social</p>
+    </div>
+  </div>
+</div>
+
+<div id="assetModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur hidden items-center justify-center p-4" onclick="if(event.target===this)closeAsset()">
+  <div class="bg-white rounded-[20px] border-[4px] border-black max-w-[520px] w-full overflow-hidden">
+    <div class="p-3 border-b-[3px] border-black flex justify-between items-center">
+      <span class="font-black text-sm">🎨 GAME-READY CHARACTER ASSET</span>
+      <button onclick="closeAsset()" class="w-8 h-8 bg-black text-white rounded-full font-black">✕</button>
+    </div>
+    <div class="p-4">
+      <div class="bg-[#f1f5f9] rounded-2xl border-[3px] border-black p-4 flex flex-col items-center" style="background-image: linear-gradient(45deg, #e2e8f0 25%, transparent 25%), linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e8f0 75%), linear-gradient(-45deg, transparent 75%, #e2e8f0 75%); background-size:20px 20px; background-position:0 0, 0 10px, 10px -10px, -10px 0px;">
+        <div class="w-[72%] aspect-[3/4] bg-white rounded-[28px] border-[4px] border-black overflow-hidden comic-shadow relative">
+          <img src="https://www.designarena.ai/u/aa054a41-57b7-4446-ba23-c4433de3efc3" class="w-full h-full object-cover object-top">
+          <div class="absolute bottom-0 inset-x-0 h-10 bg-gradient-to-t from-black/20 to-transparent"></div>
+        </div>
+        <div class="mt-3 text-center">
+          <div class="font-black">SPARROW — Half-Body Cutout</div>
+          <div class="text-[11px] font-bold text-black/60">Same clothing • Same hairstyle • Front-facing • Transparent ready • 1024px+</div>
+        </div>
+        <div class="flex gap-2 mt-3 w-full">
+          <div class="flex-1 bg-white border-2 border-black rounded-xl px-3 py-2 text-center">
+            <div class="text-[10px] font-black opacity-60">FORMAT</div><div class="font-black text-sm">PNG • WEBP</div>
+          </div>
+          <div class="flex-1 bg-[#facc15] border-2 border-black rounded-xl px-3 py-2 text-center">
+            <div class="text-[10px] font-black opacity-60">BG</div><div class="font-black text-sm">TRANSPARENT</div>
+          </div>
+        </div>
+      </div>
+      <button onclick="closeAsset()" class="mt-3 w-full bg-black text-white font-black py-3 rounded-xl">GOT IT ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden media -->
+<video id="sparrowMedia" src="https://www.designarena.ai/u/f036e35e-3890-4257-a6e1-c6a202ef6d48" preload="auto" playsinline class="hidden"></video>
+<audio id="popSfx" preload="auto"></audio>
+
+<script>
+let ouch=0, best= parseInt(localStorage.getItem('sparrowBest')||'0'), streak=0, combo=0
+let lastTap=0, soundOn=true, challenge=false, timeLeft=30, timer=null, tapsInChallenge=0
+const ouchEl=document.getElementById('ouchCount'), bestEl=document.getElementById('bestVal'), streakEl=document.getElementById('streakVal')
+const bubble=document.getElementById('bubble'), bubbleText=document.getElementById('bubbleText'), waves=document.getElementById('waves')
+const charWrap=document.getElementById('characterWrap'), charCard=document.getElementById('characterCard'), blush=document.getElementById('blush')
+const burst=document.getElementById('burst'), floatTexts=document.getElementById('floatTexts')
+const comboBadge=document.getElementById('comboBadge'), timerDisplay=document.getElementById('timerDisplay')
+const video=document.getElementById('sparrowMedia')
+bestEl.textContent=best
+// Web Audio pop
+let actx
+function ensureAudio(){
+  if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)()
+  if(actx.state==='suspended') actx.resume()
+}
+function playPop(){
+  if(!soundOn) return
+  ensureAudio()
+  const o=actx.createOscillator(), g=actx.createGain()
+  o.type='square'; o.frequency.value=720
+  g.gain.value=0.12
+  o.connect(g); g.connect(actx.destination)
+  o.start(); g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime+0.12); o.stop(actx.currentTime+0.13)
+  setTimeout(()=>{
+    const o2=actx.createOscillator(), g2=actx.createGain()
+    o2.frequency.value=1050; g2.gain.value=0.08
+    o2.connect(g2); g2.connect(actx.destination)
+    o2.start(); g2.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime+0.1); o2.stop(actx.currentTime+0.11)
+  },60)
+}
+const phrases=["AOUCH!!","OOUCH!!","AYEEE!!","OUCHIE!!","YOWW!!","OOF!!","AAAH!!"]
+function updateCounters(){
+  ouchEl.textContent=ouch
+  ouchEl.classList.remove('scale-110'); void ouchEl.offsetWidth; ouchEl.classList.add('scale-110')
+  setTimeout(()=>ouchEl.classList.remove('scale-110'),150)
+  streakEl.textContent=streak
+  bestEl.textContent=best
+  if(combo>=3){ comboBadge.classList.remove('hidden'); comboBadge.textContent='🔥 COMBO x'+combo}
+  else comboBadge.classList.add('hidden')
+}
+function handleTap(e){
+  if(document.getElementById('startOverlay').style.display!=='none' && !document.getElementById('startOverlay').classList.contains('hidden-temp')) return
+  // prevent double fire
+  const now=Date.now()
+  const delta=now-lastTap
+  if(delta<80) return
+  lastTap=now
+  // streak/combo
+  if(delta<900){ streak++; combo=Math.min(9, combo+1)} else { streak=1; combo=1}
+  ouch++
+  if(challenge) tapsInChallenge++
+  if(ouch>best){ best=ouch; localStorage.setItem('sparrowBest', best)}
+  updateCounters()
+  // visuals
+  triggerVisuals()
+  // audio
+  playSparrow()
+  playPop()
+  if(navigator.vibrate) navigator.vibrate(35)
+  // confetti on combo
+  if(combo>=5 && window.confetti){
+    confetti({particleCount:18, spread:60, origin:{x:0.5,y:0.6}, colors:['#facc15','#a855f7','#06b6d4'], scalar:0.7})
+  }
+}
+function triggerVisuals(){
+  // card bounce
+  charCard.classList.remove('bounce-tap'); void charCard.offsetWidth; charCard.classList.add('bounce-tap')
+  charWrap.classList.remove('shake'); void charWrap.offsetWidth; charWrap.classList.add('shake')
+  setTimeout(()=>{charCard.classList.remove('bounce-tap'); charWrap.classList.remove('shake')},500)
+  // blush
+  blush.style.opacity='1'; setTimeout(()=>blush.style.opacity='0',260)
+  // bubble
+  bubbleText.textContent=phrases[Math.floor(Math.random()*phrases.length)]
+  bubble.classList.remove('hidden')
+  bubble.firstElementChild.classList.remove('bubble-in'); void bubble.firstElementChild.offsetWidth; bubble.firstElementChild.classList.add('bubble-in')
+  // waves
+  waves.classList.remove('hidden')
+  waves.querySelectorAll('.wave').forEach(w=>{w.style.animation='none'; void w.offsetWidth; w.style.animation=''})
+  // floating text
+  const ft=document.createElement('div')
+  ft.textContent= ['+1','+1 💥','+1 ✨'][Math.floor(Math.random()*3)]
+  ft.className='absolute left-1/2 top-[22%] -translate-x-1/2 font-black text-[18px] text-[#ff3b30] pointer-events-none'
+  ft.style.textShadow='2px 2px 0 #000, 0 2px 8px rgba(0,0,0,0.2)'
+  ft.style.animation='floatUp 700ms ease-out forwards'
+  floatTexts.appendChild(ft)
+  // particles burst
+  burst.innerHTML=''
+  const emojis=['💥','✨','⭐','💫','🔥']
+  for(let i=0;i<10;i++){
+    const p=document.createElement('div')
+    p.className='particle text-[18px]'
+    p.textContent=emojis[Math.floor(Math.random()*emojis.length)]
+    const ang=Math.random()*Math.PI*2, dist= 60+Math.random()*70
+    p.style.left='50%'; p.style.top='50%'
+    p.style.setProperty('--x', Math.cos(ang)*dist+'px')
+    p.style.setProperty('--y', Math.sin(ang)*dist+'px')
+    burst.appendChild(p)
+  }
+  // auto hide
+  clearTimeout(window._bubbleT)
+  window._bubbleT=setTimeout(()=>{
+    bubble.classList.add('hidden')
+    waves.classList.add('hidden')
+    floatTexts.innerHTML=''
+  }, 1100)
+  // tap button pulse
+  const btn=document.getElementById('tapBtn')
+  btn.style.transform='scale(0.97)'
+  setTimeout(()=>btn.style.transform='',120)
+}
+// audio sync
+function playSparrow(){
+  if(!soundOn) return
+  ensureAudio()
+  video.currentTime=0
+  video.volume=1
+  const p=video.play()
+  if(p) p.catch(()=>{})
+  // also sync bubble hide with video duration
+  video.onended=()=>{
+    // keep bubble a bit after
+  }
+}
+function toggleSound(){
+  soundOn=!soundOn
+  document.getElementById('soundBtn').textContent=soundOn?'🔊':'🔇'
+  document.getElementById('soundBtn').className= soundOn ? 'w-9 h-9 rounded-xl bg-[#facc15] border-2 border-black flex items-center justify-center' : 'w-9 h-9 rounded-xl bg-white border-2 border-black flex items-center justify-center opacity-60'
+  video.muted=!soundOn
+}
+function resetGame(){
+  ouch=0; streak=0; combo=0; tapsInChallenge=0
+  updateCounters()
+  // small shake feedback
+  charWrap.classList.add('shake'); setTimeout(()=>charWrap.classList.remove('shake'),400)
+}
+function enterGame(withChallenge=false){
+  document.getElementById('startOverlay').style.display='none'
+  document.getElementById('startOverlay').classList.add('hidden-temp')
+  ensureAudio()
+  if(withChallenge) startChallenge()
+}
+function startChallenge(){
+  closeGameOver()
+  challenge=true; timeLeft=30; tapsInChallenge=0
+  document.getElementById('challengeBtn').textContent='● LIVE'
+  document.getElementById('challengeBtn').className='bg-[#ff3b30] text-white font-black text-[11px] px-3 py-1.5 rounded-full border-2 border-black animate-pulse'
+  updateTimer()
+  clearInterval(timer)
+  timer=setInterval(()=>{
+    timeLeft--
+    updateTimer()
+    if(timeLeft<=0){
+      clearInterval(timer)
+      endChallenge()
+    }
+  },1000)
+  // hide start if still visible
+  document.getElementById('startOverlay').style.display='none'
+}
+function updateTimer(){
+  const m=String(Math.floor(timeLeft/60)).padStart(2,'0'), s=String(timeLeft%60).padStart(2,'0')
+  timerDisplay.textContent=`${m}:${s}`
+  if(timeLeft<=5) timerDisplay.classList.add('text-[#ff3b30]'); else timerDisplay.classList.remove('text-[#ff3b30]')
+}
+function endChallenge(){
+  challenge=false
+  document.getElementById('challengeBtn').textContent='START →'
+  document.getElementById('challengeBtn').className='bg-white text-black font-black text-[11px] px-3 py-1.5 rounded-full border-2 border-white hover:bg-yellow-300 transition'
+  timerDisplay.textContent='00:30'
+  // show game over
+  const final=document.getElementById('finalScore'), bestF=document.getElementById('finalBest'), tps=document.getElementById('finalTps'), rank=document.getElementById('rankText')
+  final.textContent=tapsInChallenge
+  if(tapsInChallenge>best){ best=tapsInChallenge; localStorage.setItem('sparrowBest', best); bestEl.textContent=best}
+  bestF.textContent=best
+  tps.textContent=(tapsInChallenge/30).toFixed(1)
+  let r='TAP NOVICE'
+  if(tapsInChallenge>25) r='⭐ TAP STAR'
+  if(tapsInChallenge>45) r='🔥 OUCH MASTER'
+  if(tapsInChallenge>70) r='👑 SPARROW LEGEND'
+  if(tapsInChallenge>100) r='💥 ULTRA TAPPER!'
+  rank.textContent='RANK: '+r
+  document.getElementById('gameOver').classList.remove('hidden'); document.getElementById('gameOver').classList.add('flex')
+  if(window.confetti) confetti({particleCount:80, spread:80, origin:{y:0.6}})
+}
+function closeGameOver(){
+  document.getElementById('gameOver').classList.add('hidden'); document.getElementById('gameOver').classList.remove('flex')
+  // reset tapsInChallenge after close? keep for free mode total stays
+  tapsInChallenge=0
+}
+function shareScore(){
+  const text=`I tapped SPARROW ${document.getElementById('finalScore').textContent} times in 30s! AOUCH!! 👆🔊 #SparrowTap`
+  if(navigator.share) navigator.share({title:'SPARROW — TAP & LISTEN!', text}).catch(()=>{})
+  else if(navigator.clipboard) {navigator.clipboard.writeText(text); alert('Score copied! '+text)}
+  else alert(text)
+}
+function openThumb(){ document.getElementById('thumbModal').classList.remove('hidden'); document.getElementById('thumbModal').classList.add('flex')}
+function closeThumb(){ document.getElementById('thumbModal').classList.add('hidden'); document.getElementById('thumbModal').classList.remove('flex')}
+function openAsset(){ document.getElementById('assetModal').classList.remove('hidden'); document.getElementById('assetModal').classList.add('flex')}
+function closeAsset(){ document.getElementById('assetModal').classList.add('hidden'); document.getElementById('assetModal').classList.remove('flex')}
+function downloadThumb(){ alert('Thumbnail is ready! Right-click / long-press the image to save — or screenshot this preview (1280×720). For high-res export, use browser print to PDF.')}
+// keyboard
+window.addEventListener('keydown', e=>{
+  if(e.code==='Space'){ e.preventDefault(); handleTap()}
+})
+// allow tap anywhere on characterWrap already
+// prevent scrolling on space
+document.addEventListener('touchstart', ensureAudio, {once:true})
+document.addEventListener('click', ensureAudio, {once:true})
+// floatUp keyframes dynamically
+const style=document.createElement('style')
+style.textContent=`@keyframes floatUp{0%{transform:translate(-50%,0) scale(1); opacity:1}100%{transform:translate(-50%,-46px) scale(1.2); opacity:0}}`
+document.head.appendChild(style)
+</script>
+</body>
+</html>
